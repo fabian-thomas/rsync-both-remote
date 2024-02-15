@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+
+# NOTE: if root is needed on device but no ssh key deployed,
+# try to fully qualify path so that non-home version is used and set uid/gid there
+
+port=1338
+
+if [ "$1" = --direct ]; then
+    direct=1
+    shift
+fi
+
+IFS=':' read -r source_host source_path <<< "$1"
+IFS=':' read -r target_host target_path <<< "$2"
+
+if [ -z "$target_path" ]; then
+    target_path=.
+fi
+if [ -z "$source_path" ]; then
+    echo "Source path shouldn't be empty"
+    exit 1
+fi
+
+if [[ "$source_path" = /* ]]; then
+    cat <<EOF > /tmp/rsyncd.conf
+secrets file = /tmp/rsyncd-secrets
+auth users = both-remote
+
+[rsync-via-port]
+path = /
+use chroot = false
+read only = false
+# set uid here
+# e.g. uncomment for root
+# uid=0
+# gid=0
+EOF
+else
+    cat <<EOF > /tmp/rsyncd.conf
+secrets file = /tmp/rsyncd-secrets
+auth users = both-remote
+
+[rsync-via-port]
+path = %HOME%
+use chroot = false
+read only = false
+uid = %USER%
+EOF
+fi
+
+# setup a secrets file
+echo -n "both-remote:" > /tmp/rsyncd-secrets
+pw=$(openssl rand -base64 12)
+echo -n "$pw" >> /tmp/rsyncd-secrets
+echo -n "$pw" > /tmp/rsyncd-password
+
+rsync /tmp/rsyncd.conf "$source_host":/tmp/rsyncd.conf
+rsync /tmp/rsyncd-secrets "$source_host":/tmp
+rsync /tmp/rsyncd-password "$target_host":/tmp
+
+if [ -z "$direct" ]; then
+    remote_net_path=localhost
+else
+    remote_net_path="$source_host"
+fi
+
+src_cmd=("$source_host" rsync --daemon --port="$port" --config="/tmp/rsyncd.conf")
+dest_cmd=("$target_host" rsync -ahrP --delete --password-file=/tmp/rsyncd-password "rsync://both-remote@$remote_net_path:$port/rsync-via-port/$source_path" "$target_path")
+if [ -z "$direct" ]; then
+    src_cmd=(-L "$port:localhost:$port" "${src_cmd[@]}")
+    dest_cmd=(-R "$port:localhost:$port" "${dest_cmd[@]}")
+fi
+ssh "${src_cmd[@]}"
+sleep 0.1
+ssh "${dest_cmd[@]}"
+res=$?
+
+ssh "$source_host" pkill rsync
+ssh "$source_host" pkill rsync
+ssh "$source_host" pkill rsync
+
+if [ -z "$direct" ]; then
+    ssh -O cancel "${src_cmd[@]}"
+    ssh -O cancel "${dest_cmd[@]}"
+fi
+
+exit $res
