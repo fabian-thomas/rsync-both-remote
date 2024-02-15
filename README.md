@@ -14,7 +14,7 @@ Thereby, it supports two modes:
 ## Usage
 Use this script as you would use rsync, but make sure to checkout the caution section below.
 ```sh
-rysnc-both-remote user@remote-machine-1:file/in/home/dir remote-machine-2:
+rysnc-both-remote --direct user@remote-machine-1:file/in/home/dir remote-machine-2:
 ```
 
 ## Caution
