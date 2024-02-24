@@ -61,7 +61,8 @@ rsync /tmp/rsyncd-password "$target_host":/tmp
 if [ -z "$direct" ]; then
     remote_net_path=localhost
 else
-    remote_net_path="$source_host"
+    # remove user since we replace it below
+    remote_net_path="${source_host#*@}"
 fi
 
 src_cmd=("$source_host" rsync --daemon --port="$port" --config="/tmp/rsyncd.conf")
