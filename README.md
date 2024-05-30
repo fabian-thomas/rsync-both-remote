@@ -11,6 +11,24 @@ Thereby, it supports two modes:
    This fails if the machines can't ping each other, so only use it when you know that the machines are in the same network.
    But if you use it, your transfers will be pretty fast.
 
+## Installation
+You should be able to just clone this repository and copy the script to a chosen location.
+There is also a Makefile that symlinks the script to `$HOME/.local/bin`.
+
+### Nix
+
+If you use Nix, you can test out the script without installation:
+``` sh
+nix run github:fabian-thomas/rsync-both-remote
+```
+
+or install it permanently:
+``` sh
+nix profile install github:fabian-thomas/rsync-both-remote
+```
+
+The derivation appends packages like `ssh` and `rsync` to the `PATH`, so the script should prefer the local packages.
+
 ## Usage
 Use this script as you would use rsync, but make sure to checkout the caution section below.
 ```sh
@@ -35,4 +53,4 @@ Security is not a primary goal of this script, although you should be pretty saf
 SSH port forwarding makes sure that your network is secure in the non-direct mode.
 In the direct mode you should be safe since the script uses a password to init the transfer.
 An attacker on your or one of the remote machines is out of the threat model this script protects you against.
-To fix that you could copy the config files, especially the password and secrets files to your home directory instead of copying them to the world readable `/tmp`.
+To fix that you could copy the config files, especially the password and secrets files to your home directory instead of copying them to the world writable `/tmp`.

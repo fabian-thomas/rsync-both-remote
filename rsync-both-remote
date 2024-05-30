@@ -4,11 +4,21 @@
 # try to fully qualify path so that non-home version is used and set uid/gid there
 
 port=1338
-
-if [ "$1" = --direct ]; then
-    direct=1
-    shift
-fi
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --direct)
+            direct=1
+            shift
+            ;;
+        --port)
+            port=$2
+            shift 2
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
 
 IFS=':' read -r source_host source_path <<< "$1"
 IFS=':' read -r target_host target_path <<< "$2"
@@ -54,9 +64,9 @@ pw=$(openssl rand -base64 12)
 echo -n "$pw" >> /tmp/rsyncd-secrets
 echo -n "$pw" > /tmp/rsyncd-password
 
-rsync /tmp/rsyncd.conf "$source_host":/tmp/rsyncd.conf
-rsync /tmp/rsyncd-secrets "$source_host":/tmp
-rsync /tmp/rsyncd-password "$target_host":/tmp
+rsync --chmod=600 /tmp/rsyncd.conf "$source_host":/tmp/rsyncd.conf
+rsync --chmod=600 /tmp/rsyncd-secrets "$source_host":/tmp
+rsync --chmod=600 /tmp/rsyncd-password "$target_host":/tmp
 
 if [ -z "$direct" ]; then
     remote_net_path=localhost
@@ -66,7 +76,7 @@ else
 fi
 
 src_cmd=("$source_host" rsync --daemon --port="$port" --config="/tmp/rsyncd.conf")
-dest_cmd=("$target_host" rsync -ahrP --delete --password-file=/tmp/rsyncd-password "rsync://both-remote@$remote_net_path:$port/rsync-via-port/$source_path" "$target_path")
+dest_cmd=("$target_host" rsync -ahrPc --password-file=/tmp/rsyncd-password "rsync://both-remote@$remote_net_path:$port/rsync-via-port/$source_path" "$target_path")
 if [ -z "$direct" ]; then
     src_cmd=(-L "$port:localhost:$port" "${src_cmd[@]}")
     dest_cmd=(-R "$port:localhost:$port" "${dest_cmd[@]}")
