@@ -17,12 +17,7 @@ There is also a Makefile that symlinks the script to `$HOME/.local/bin`.
 
 ### Nix
 
-If you use Nix, you can test out the script without installation:
-``` sh
-nix run github:fabian-thomas/rsync-both-remote
-```
-
-or install it permanently:
+If you use Nix, you can install the script permanently with:
 ``` sh
 nix profile install github:fabian-thomas/rsync-both-remote
 ```
